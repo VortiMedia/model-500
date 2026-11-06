@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Local MCP that drives rekordbox, RMX-IGNITE Sample Manager and Audacity on macOS, and nothing else."
 requires-python = ">=3.11"
 dependencies = [
-    "mcp>=1.13,<2",
+    "mcp>=1.13,<3",
     "pyobjc-framework-ApplicationServices>=11",
     "pyobjc-framework-Quartz>=11",
 ]
