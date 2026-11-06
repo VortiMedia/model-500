@@ -14,9 +14,9 @@ model-500 is a set of seven agent skills and two small MCP servers for [Claude C
 
 It was built on one rig and one library: 2 CDJ-3000X, DJM-A9, RMX-IGNITE, and rekordbox 7.2.19. **No stick from this suite has loaded on a CDJ-3000X, and no drop has played on an RMX-IGNITE.** The [status table](#tools-and-status) says what has run and what has not.
 
-The name is a nod to Juan Atkins's Model 500 alias. Juan Atkins has no connection to this project and does not endorse it.
+The name is a nod to [Juan Atkins](https://en.wikipedia.org/wiki/Juan_Atkins)'s Model 500 alias. Juan Atkins has no connection to this project and does not endorse it.
 
-**Contents:** [Do not lists](#do-not-lists) · [Requirements](#requirements) · [Quick start](#quick-start) · [Try one script](#try-one-script) · [Skill map](#skill-map) · [Tool order](#tool-order) · [Tools and status](#tools-and-status) · [Things that will look like bugs](#things-that-will-look-like-bugs) · [Tests](#tests) · [Docs](#docs) · [Credits](#credits) · [Disclaimer](#disclaimer)
+**Contents:** [Do not lists](#do-not-lists) · [Requirements](#requirements) · [Quick start](#quick-start) · [Try one script](#try-one-script) · [Skill map](#skill-map) · [Tool order](#tool-order) · [Tools and status](#tools-and-status) · [Things that will look like bugs](#things-that-will-look-like-bugs) · [Tests](#tests) · [Docs](#docs) · [Links and credits](#links-and-credits) · [Disclaimer](#disclaimer)
 
 ## Do not lists
 
@@ -40,32 +40,40 @@ The ask-first rules are instructions to the agent, not locks. Keep your own back
 ## Requirements
 
 - macOS. It has only run on macOS 27. `transcribe.py` needs Apple Silicon.
-- [Claude Code](https://claude.com/claude-code). Other agents are not tested.
-- [uv](https://docs.astral.sh/uv/), ffmpeg with ffprobe, and `python3`.
-- rekordbox 7, for the library, set, and export skills. It ran on 7.2.19. For the CDJ-3000X, use 7.2.11 or later, and avoid 7.2.12 (F16).
-- Optional: RMX-IGNITE Sample Manager (studied at 1.0.0.0336) and `yt-dlp`.
+- [Claude Code](https://code.claude.com/docs/en/overview). Other agents are not tested.
+- [uv](https://docs.astral.sh/uv/getting-started/installation/), [FFmpeg](https://ffmpeg.org/) with ffprobe, and `python3`. With [Homebrew](https://brew.sh): `brew install uv ffmpeg`.
+- [rekordbox 7](https://rekordbox.com/en/download/), for the library, set, and export skills. It ran on 7.2.19. For the CDJ-3000X, use 7.2.11 or later, and avoid 7.2.12 (F16).
+- Optional: RMX-IGNITE Sample Manager from [AlphaTheta](https://alphatheta.com/en/product/effector/rmx-ignite/black/) (studied at 1.0.0.0336), [Audacity 4](https://www.audacityteam.org/download/), and [yt-dlp](https://github.com/yt-dlp/yt-dlp).
 
 You do not need the hardware for the file, library, and set work.
 
 ## Quick start
 
-The repo must sit at `~/model-500`, and the rekordbox MCP at `~/rekordbox-mcp`. The skills use those paths.
+**The short way:** paste this into Claude Code. [AGENTS.md](AGENTS.md) gives the agent the steps, the gates, and the checks.
+
+```text
+Clone https://github.com/VortiMedia/model-500 to ~/model-500. Read its AGENTS.md and install it for me.
+```
+
+**By hand:** the repo must sit at `~/model-500`, and the rekordbox MCP at `~/rekordbox-mcp`. The skills use those paths.
 
 ```sh
-# The suite
+# 1. The suite. install.sh links skills/* into ~/.claude/skills and refuses to overwrite anything.
 git clone https://github.com/VortiMedia/model-500 ~/model-500
 cd ~/model-500
-scripts/install.sh    # links skills/* into ~/.claude/skills and refuses to overwrite anything
+scripts/install.sh
 
-# Your private values. Git ignores both copies. Fill in PROFILE.md.
+# 2. Your private values. Git ignores both copies. Fill in PROFILE.md.
 cp state/PROFILE.example.md state/PROFILE.md
 cp state/STATE.example.md state/STATE.md
 
-# This repo's MCP servers
-claude mcp add --scope user ignite -- uv run --directory ~/model-500/mcp/ignite-mcp python server.py
+# 3. This repo's MCP servers
+uv sync --directory ~/model-500/mcp/ignite-mcp --frozen
+uv sync --directory ~/model-500/mcp/mac-gui --frozen
+claude mcp add --scope user ignite -- uv --directory ~/model-500/mcp/ignite-mcp run --frozen python server.py
 claude mcp add --scope user mac-gui -- uv --directory ~/model-500/mcp/mac-gui run --frozen mac-gui
 
-# The rekordbox MCP. Quit rekordbox and back up ~/Library/Pioneer/rekordbox first.
+# 4. The rekordbox MCP, pinned and patched
 git clone https://github.com/davehenke/rekordbox-mcp ~/rekordbox-mcp
 git -C ~/rekordbox-mcp checkout d8dce67
 git -C ~/rekordbox-mcp apply ~/model-500/mcp/rekordbox-mcp-path.patch
@@ -73,9 +81,32 @@ uv sync --directory ~/rekordbox-mcp --frozen
 claude mcp add --scope user rekordbox -- uv --directory ~/rekordbox-mcp run --frozen rekordbox-mcp
 ```
 
+Then do these once, with rekordbox closed:
+
+```sh
+# Back up the whole library folder. The MCP's own backup misses recent changes (F03).
+mkdir -p ~/rekordbox-backups
+cp -Rp ~/Library/Pioneer/rekordbox ~/rekordbox-backups/pre-model-500
+
+# rekordbox encrypts its database. This checks that pyrekordbox can open it.
+uv --directory ~/rekordbox-mcp run --frozen python setup-key.py
+```
+
+If the key check says no key, pyrekordbox has a command that fetches one from the internet: `uv --directory ~/rekordbox-mcp run --frozen python -m pyrekordbox download-key`. That command has not run in this build. See the [pyrekordbox docs](https://pyrekordbox.readthedocs.io). The Audacity MCP is optional and needs a custom fork, so its setup is in [docs/tools/audacity.md](docs/tools/audacity.md).
+
+Check the install:
+
+```sh
+ls -l ~/.claude/skills | grep -c model-500   # 7
+claude mcp list                              # ignite, mac-gui, rekordbox: connected
+~/model-500/tests/run_all.sh                 # a tool that is absent prints SKIP
+```
+
 Start a new chat, because a new MCP loads only in a new chat. Then ask "where are we on the DJ stuff". The `model-500` skill reads your profile, reports what it finds, and routes the work.
 
-More setup: the database key and the patch in [docs/tools/rekordbox.md](docs/tools/rekordbox.md), and macOS permissions in [docs/tools/mac-gui.md](docs/tools/mac-gui.md). `scripts/install.sh --uninstall` removes only its own links.
+The skills assume the build rig, and the export steps assume a CDJ-3000X. If your gear differs, put it in `state/PROFILE.md` and tell the agent.
+
+More setup: the patch in [docs/tools/rekordbox.md](docs/tools/rekordbox.md), and macOS permissions in [docs/tools/mac-gui.md](docs/tools/mac-gui.md). `scripts/install.sh --uninstall` removes only its own links.
 
 ## Try one script
 
@@ -193,16 +224,37 @@ This runs the skill lint, the public-release check, the script tests, and the MC
 
 ## Docs
 
-[docs/README.md](docs/README.md) is the index. [CONTRIBUTING.md](CONTRIBUTING.md) covers failure entries, new skills, and tests. [CHANGELOG.md](CHANGELOG.md) lists releases.
+[docs/README.md](docs/README.md) is the index. [AGENTS.md](AGENTS.md) is for agents that install or change this repo. [CONTRIBUTING.md](CONTRIBUTING.md) covers failure entries, new skills, and tests. [CHANGELOG.md](CHANGELOG.md) lists releases.
 
-## Credits
+## Links and credits
 
-- [davehenke/rekordbox-mcp](https://github.com/davehenke/rekordbox-mcp): the rekordbox MCP server.
-- [dylanljones/pyrekordbox](https://github.com/dylanljones/pyrekordbox): reads and writes the rekordbox database.
-- [xDarkzx/Audacity4-MCP](https://github.com/xDarkzx/Audacity4-MCP) and its fork [Audacity4-Dev-MCP](https://github.com/xDarkzx/Audacity4-Dev-MCP): the Audacity MCP and bridge.
-- [uv](https://docs.astral.sh/uv/), [FFmpeg](https://ffmpeg.org/), [mlx-whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper), [yt-dlp](https://github.com/yt-dlp/yt-dlp).
+**Code this suite runs on**
+
+| Project | Use | Version here |
+|---|---|---|
+| [davehenke/rekordbox-mcp](https://github.com/davehenke/rekordbox-mcp) | rekordbox MCP server | [`d8dce67`](https://github.com/davehenke/rekordbox-mcp/tree/d8dce67), with [one patch](mcp/rekordbox-mcp-path.patch) |
+| [dylanljones/pyrekordbox](https://github.com/dylanljones/pyrekordbox) ([docs](https://pyrekordbox.readthedocs.io)) | Reads and writes the rekordbox database | 0.4.3, through the MCP's lock file |
+| [xDarkzx/Audacity4-MCP](https://github.com/xDarkzx/Audacity4-MCP) | Audacity MCP server, optional | [`280c7a3`](https://github.com/xDarkzx/Audacity4-MCP/tree/280c7a3f46c19c8686c53a37f788264630aa4b8c) |
+| [xDarkzx/Audacity4-Dev-MCP](https://github.com/xDarkzx/Audacity4-Dev-MCP/tree/feature/mcp-audio-cleanup-pipelines) | Audacity fork with the bridge that server needs | Not built here |
+| [mlx-whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper) | Transcribes dialogue | Latest, through `uv run --with` |
+| [yt-dlp](https://github.com/yt-dlp/yt-dlp) | Reads source metadata, optional | Your install |
+| [mutagen](https://github.com/quodlibet/mutagen) | Writes audio tags | Through the MCP's lock file |
 
 These projects do not endorse model-500.
+
+**Apps and tools**
+
+- [Claude Code](https://code.claude.com/docs/en/overview), [uv](https://docs.astral.sh/uv/), [FFmpeg](https://ffmpeg.org/), [Homebrew](https://brew.sh).
+- [rekordbox](https://rekordbox.com/en/download/), [Audacity](https://www.audacityteam.org/download/).
+- [RMX-IGNITE](https://alphatheta.com/en/product/effector/rmx-ignite/black/). The product page and [AlphaTheta support](https://www.alphatheta.com/en/support/) are the place to look for Sample Manager and its manual.
+
+**References for the design**
+
+- [The Complete Guide to Building Skills for Claude](https://resources.anthropic.com/hubfs/The-Complete-Guide-to-Building-Skill-for-Claude.pdf) (Anthropic) and [Claude Code skills](https://code.claude.com/docs/en/skills).
+- [Model Context Protocol](https://modelcontextprotocol.io) and [MCP in Claude Code](https://code.claude.com/docs/en/mcp).
+- [Computer use tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/computer-use-tool). This suite does not call that API. See [docs/tools/computer-use.md](docs/tools/computer-use.md).
+- [ASD-STE100](https://www.asd-ste100.org/), the controlled language the skills loosely follow.
+- [AGENTS.md](https://agents.md), the format of this repo's agent instructions.
 
 ## Disclaimer
 

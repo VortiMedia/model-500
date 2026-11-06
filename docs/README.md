@@ -28,4 +28,5 @@ Start with the [README](../README.md) for install and tool status. This page lis
 
 ## Project
 
+- [AGENTS.md](../AGENTS.md): install and repo rules for agents. `CLAUDE.md` imports it.
 - [CONTRIBUTING.md](../CONTRIBUTING.md), [SECURITY.md](../SECURITY.md), [CHANGELOG.md](../CHANGELOG.md), [LICENSE](../LICENSE).

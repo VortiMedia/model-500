@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- `AGENTS.md` with install gates and checks, and `CLAUDE.md`, which imports it.
+- README: a paste-in install prompt, backup and key steps, install checks, and a full links section.
+- `docs/tools/audacity.md`: exact setup commands.
+
+### Changed
+- Quick start runs `uv sync --frozen` before it registers each MCP, and registers `ignite` with `--frozen`.
+
 ## 0.1.0 (2026-11-06)
 
 First public version.

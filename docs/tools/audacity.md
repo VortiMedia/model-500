@@ -1,19 +1,26 @@
 # Audacity MCP (third-party: xDarkzx/Audacity4-MCP)
 
-Status: installed and registered, but NOT usable with stock Audacity 4.0.2. Live editing is unproven.
+Status: installs and connects, but NOT usable with stock Audacity 4.0.2. Live editing is unproven.
 
 ## Why it cannot drive the installed app
 Audacity 4 has no scripting (mod-script-pipe is gone). This server talks to a TCP bridge on
 127.0.0.1:2212 that exists only in a custom fork, xDarkzx/Audacity4-Dev-MCP, branch
-feature/mcp-audio-cleanup-pipelines. We checked /Applications/Audacity 4.app: no MCP strings in the
+feature/mcp-audio-cleanup-pipelines. We checked Audacity 4.app in /Applications: no MCP strings in the
 binary, nothing listening on 2212. No prebuilt fork exists. Upstream says only Windows was built end to end.
 Building on macOS needs Qt 6.8+, CMake, Ninja, about 20 min. Not done.
 
-## Setup (done)
-- Clone: ~/Audacity4-MCP, pinned commit 280c7a3f46c19c8686c53a37f788264630aa4b8c (2026-09-28).
-- Venv: ~/Audacity4-MCP/.venv (Python 3.15.0, mcp 1.30.0; server needs mcp<2).
-- Registered user scope: claude mcp add --scope user audacity -- ~/Audacity4-MCP/.venv/bin/audacity4-mcp
-- Setup changed no Audacity preferences. Nothing touched mod-script-pipe.
+## Setup (optional)
+Skip this unless you plan to build the fork. The samples skill uses ffmpeg without it.
+
+```sh
+git clone https://github.com/xDarkzx/Audacity4-MCP ~/Audacity4-MCP
+git -C ~/Audacity4-MCP checkout 280c7a3f46c19c8686c53a37f788264630aa4b8c
+uv venv ~/Audacity4-MCP/.venv
+uv pip install --python ~/Audacity4-MCP/.venv/bin/python -e ~/Audacity4-MCP
+claude mcp add --scope user audacity -- ~/Audacity4-MCP/.venv/bin/audacity4-mcp
+```
+
+Fork: [xDarkzx/Audacity4-Dev-MCP](https://github.com/xDarkzx/Audacity4-Dev-MCP/tree/feature/mcp-audio-cleanup-pipelines). Follow its build notes. The commit above is dated 2026-09-28. The server needs mcp<2, and its pyproject pins that. Setup changes no Audacity preferences.
 
 ## Security review (read all server4/ code; ran only after review)
 - No subprocess, os.system, eval/exec, pickle, telemetry, or outbound HTTP in the server.
