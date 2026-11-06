@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 200" role="img" aria-labelledby="t d">
+  <title id="t">model-500</title>
+  <desc id="d">The word model-500 in lowercase monospace type on a dark background, above a row of bars like an audio waveform.</desc>
+  <rect width="900" height="200" fill="#1b1a18"/>
+  <text x="450" y="112" fill="#f2efe8" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="84" font-weight="600" text-anchor="middle" letter-spacing="-2">model-500</text>
+  <g fill="#d85a2a">
+    <rect x="270" y="150" width="6" height="8"/><rect x="284" y="146" width="6" height="16"/><rect x="298" y="150" width="6" height="8"/>
+    <rect x="312" y="142" width="6" height="24"/><rect x="326" y="150" width="6" height="8"/><rect x="340" y="146" width="6" height="16"/>
+    <rect x="354" y="150" width="6" height="8"/><rect x="368" y="138" width="6" height="32"/><rect x="382" y="150" width="6" height="8"/>
+    <rect x="396" y="146" width="6" height="16"/><rect x="410" y="150" width="6" height="8"/><rect x="424" y="142" width="6" height="24"/>
+    <rect x="438" y="150" width="6" height="8"/><rect x="452" y="146" width="6" height="16"/><rect x="466" y="150" width="6" height="8"/>
+    <rect x="480" y="138" width="6" height="32"/><rect x="494" y="150" width="6" height="8"/><rect x="508" y="146" width="6" height="16"/>
+    <rect x="522" y="150" width="6" height="8"/><rect x="536" y="142" width="6" height="24"/><rect x="550" y="150" width="6" height="8"/>
+    <rect x="564" y="146" width="6" height="16"/><rect x="578" y="150" width="6" height="8"/><rect x="592" y="138" width="6" height="32"/>
+    <rect x="606" y="150" width="6" height="8"/><rect x="620" y="146" width="6" height="16"/>
+  </g>
+</svg>

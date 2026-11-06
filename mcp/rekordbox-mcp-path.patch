@@ -1,0 +1,17 @@
+diff --git a/rekordbox_mcp/database.py b/rekordbox_mcp/database.py
+index c5b5eea..78aec27 100644
+--- a/rekordbox_mcp/database.py
++++ b/rekordbox_mcp/database.py
+@@ -90,6 +90,12 @@ class RekordboxDatabase:
+         if not base_path.exists():
+             raise FileNotFoundError(f"Rekordbox directory not found at {base_path}")
+ 
++        # master.db and masterPlaylists6.xml live in the rekordbox subfolder.
++        # pyrekordbox needs this folder to keep the playlist XML in sync.
++        rekordbox_dir = base_path / "rekordbox"
++        if (rekordbox_dir / "master.db").exists():
++            return rekordbox_dir
++
+         return base_path
+ 
+     async def is_connected(self) -> bool:

@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    # Stdlib only. No audio tools, vendor apps, or hardware.
+    # state/private-terms.txt is gitignored, so check_public skips the private-term scan here.
+    # Its home-path and email checks still run.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python3 tests/lint_skills.py
+      - run: python3 tests/check_public.py
+      - run: python3 tests/test_scripts.py
+
+  mcp:
+    # The ignite server reads /Volumes and calls diskutil, so its tests stay off Ubuntu.
+    # mac-gui passes with no macOS permissions: the tests that need a grant skip themselves.
+    # Left out everywhere: test_audacity_mcp.py, because it needs a third-party clone.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: brew install ffmpeg
+      - run: python3 tests/test_ignite_mcp.py
+      - run: uv run --directory mcp/mac-gui --frozen python "$GITHUB_WORKSPACE/tests/test_mac_gui.py"
