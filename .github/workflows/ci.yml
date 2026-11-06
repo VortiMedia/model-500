@@ -36,4 +36,9 @@ jobs:
       - uses: astral-sh/setup-uv@v10.3.3
       - run: brew install ffmpeg
       - run: python3 tests/test_ignite_mcp.py
-      - run: uv run --directory mcp/mac-gui --frozen python "$GITHUB_WORKSPACE/tests/test_mac_gui.py"
+      - name: mac-gui tests
+        working-directory: mcp/mac-gui
+        run: |
+          uv sync --frozen
+          uv pip list | grep '^mcp '
+          .venv/bin/python "$GITHUB_WORKSPACE/tests/test_mac_gui.py"
