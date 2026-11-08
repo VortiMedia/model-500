@@ -22,7 +22,7 @@ The name is a nod to [Juan Atkins](https://en.wikipedia.org/wiki/Juan_Atkins)'s 
 
 rekordbox libraries are easy to damage and hard to check. An agent that guesses can lose real work. So each skill carries a `## Do not` list of things that went wrong in real sessions, in the same form: what the agent did, what happened, and the rule.
 
-Two of the 42 entries in [`docs/failures.md`](docs/failures.md), as the skills hold them:
+Two of the 44 entries in [`docs/failures.md`](docs/failures.md), as the skills hold them:
 
 > **F06** Did: Ran `update_content_path(save=True)` to fix moved paths. Result: pyrekordbox rewrote ANLZ files: PVDI lost, PCOB, PCO2, PSSI changed. Rule: Use `safe_move.py`. Never call that function with `save=True`.
 
@@ -178,7 +178,7 @@ The samples skill differs. It defaults to scripts and ffmpeg, because the Audaci
 | Tool | Source | Status | What ran |
 |---|---|---|---|
 | rekordbox MCP | [davehenke/rekordbox-mcp](https://github.com/davehenke/rekordbox-mcp), with one patch | proven | Imports, playlists, and reads on a real library in past sessions |
-| ignite MCP | `mcp/ignite-mcp` | tested on fixtures only | Stdio tests on generated tones and a synthetic library. No bank filled by the real app |
+| ignite MCP | `mcp/ignite-mcp` | proven (reads); tested on fixtures only (preparation) | Read-only checks against a native backup and export; stdio tests on generated tones. No hardware playback |
 | mac-gui MCP, reads | `mcp/mac-gui` | tested on fixtures only | Status, AX tree, and screenshot on the test's own window |
 | mac-gui MCP, input | `mcp/mac-gui` | not run | Dry runs, and guard tests with recorders. Real input has never run |
 | Audacity MCP | [xDarkzx/Audacity4-MCP](https://github.com/xDarkzx/Audacity4-MCP) | not run | Needs a custom Audacity fork with a bridge on port 2212. Not driven against stock Audacity 4.0.2. Only the tool list and a clean connect error ran |
@@ -194,7 +194,7 @@ The samples skill differs. It defaults to scripts and ffmpeg, because the Audaci
 | `read_pdb.py` | export | not run | Reported "no export" on a real stick. The parser did not run on a real export in this build |
 | `stick_vs_mac.py` | export | tested on fixtures only | Track matching on fixtures. The real stick had no tracks to match |
 | CDJ-3000X load test | Hardware | not run | No stick from this suite has loaded on a CDJ |
-| RMX-IGNITE playback | Hardware | not run | No drop has played on the unit. The IGNITE USB layout is inferred from app text, not from a real export |
+| RMX-IGNITE playback | Hardware | not run | No drop from this suite has played on the unit. Native export paths and headers were inspected read-only |
 
 ## Things that will look like bugs
 
@@ -206,7 +206,7 @@ The samples skill differs. It defaults to scripts and ffmpeg, because the Audaci
 
 **`--database-path` does nothing.** The flag is in the upstream README but not in the code. The [patch](docs/tools/rekordbox.md) fixes path detection (F04).
 
-**The ignite MCP cannot fill a bank.** There is no write tool, on purpose. No real export has been seen, so slot edits and export stay in the Sample Manager app. See [docs/tools/ignite.md](docs/tools/ignite.md).
+**The ignite MCP cannot fill a bank.** There is no write tool, on purpose. Native export paths were inspected, but slot edits and export stay in the Sample Manager app. See [docs/tools/ignite.md](docs/tools/ignite.md).
 
 **mac-gui refuses your app.** It accepts three apps. That is the design, not a missing setting.
 

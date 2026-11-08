@@ -1,6 +1,6 @@
 # Failure log
 
-Real failures from DJ sessions of the first owner, 2026-10-18 to 2026-11-06. One entry per distinct failure.
+Failures from DJ sessions of the first owner (2026-10-18 to 2026-11-06), plus later reproductions dated in their entries. One entry per distinct failure.
 Skill tags: crate | library | samples | ignite | sets | export | all.
 Severity: Critical = data lost or at risk of loss. High = wrong result or real work wasted. Low = cost or friction. The build agent assigned these on 2026-11-06. The owner has not reviewed them.
 Session ids, names, and private quotes are removed from this public copy. A fuller private copy may sit in `state/failures-private.md`.
@@ -113,6 +113,12 @@ Rule: Say "not found". Offer Shazam at the timestamp. Do not guess origin.
 **F33** [ignite, High] No MCP exists  
 Did: The user installed RMX-IGNITE Sample Manager. No MCP covers it. Result: The agent cannot drive it. Samples must not be dragged onto the stick.  
 Rule: Build a local tool or use GUI steps. Never drag samples onto the stick.
+**F43** [ignite, High] Native sample paths reported missing (contribution check, 2026-11-07)
+Did: Checked a native export with the inferred `samples/00` layout. Result: All 14 existing samples were reported missing. App backups use flat `model/samples`; USB banks use `01`, `02`, and so on directly under the export root.
+Rule: Test app and USB paths separately against their native layouts. Keep the scan read-only.
+**F44** [ignite, High] Codec check missed the WAV header (contribution check, 2026-11-07)
+Did: Prepared 24-bit WAV files with FFmpeg and checked only codec fields. Result: The output used format tag 65534, while native exports used classic PCM tag 1. Hardware failure causality was not established.
+Rule: Write prepared WAV files with a classic PCM header. Test the header and unchanged PCM frames; keep hardware playback unverified.
 
 ## Agent behavior
 **F34** [all, Low] Opus on simple audits  
