@@ -1,6 +1,6 @@
 # Failure log
 
-Real failures from DJ sessions of the first owner, 2026-10-18 to 2026-11-06. One entry per distinct failure.
+Failures from DJ sessions of the first owner (2026-10-18 to 2026-11-06), plus later reproductions dated in their entries. One entry per distinct failure.
 Skill tags: crate | library | samples | ignite | sets | export | all.
 Severity: Critical = data lost or at risk of loss. High = wrong result or real work wasted. Low = cost or friction. The build agent assigned these on 2026-11-06. The owner has not reviewed them.
 Session ids, names, and private quotes are removed from this public copy. A fuller private copy may sit in `state/failures-private.md`.
@@ -62,6 +62,10 @@ Rule: Clean last. Delete `._*` and .Spotlight-V100, run mdutil -i off, recheck a
 **F18** [export, High] Rename needed GUI  
 Did: Tried to rename a playlist while rekordbox was open. Result: Agent could not write. The user had to rename it before export.  
 Rule: Tell the user GUI-only steps first, in order, before the export step.
+
+**F45** [export, Critical] Read-only audit overwrote an input (contribution check, 2026-11-07)
+Did: Passed a fixture audio path on the audited volume to `--json` in `read_pdb.py` and `stick_vs_mac.py`. Result: Both tools returned success and replaced the input with JSON.
+Rule: Reject report paths on the audited volume, including symlink and case aliases. Replace reports outside the volume atomically, so hard links cannot overwrite audited audio.
 
 ## Crate, files and tags
 **F19** [crate, High] Opus will not play  

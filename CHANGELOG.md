@@ -10,6 +10,10 @@
 ### Changed
 - Quick start runs `uv sync --frozen` before it registers each MCP, and registers `ignite` with `--frozen`.
 
+### Fixed
+- USB audit scripts refuse JSON report paths on the audited volume, including symlink and case aliases.
+- Reports outside the volume are replaced atomically, preserving audited audio even when the old report is a hard link.
+
 ## 0.1.0 (2026-11-06)
 
 First public version.

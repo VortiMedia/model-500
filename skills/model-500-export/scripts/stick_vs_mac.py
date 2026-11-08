@@ -2,6 +2,7 @@
 to the stick. It works with or without an export.pdb, because it walks the files.
 
 Usage: python3 -I stick_vs_mac.py /Volumes/STICK [--mac-root DIR ...] [--json OUT.json]
+JSON reports must be outside the audited volume, including resolved symlink targets.
 --mac-root defaults to ~/Music. Names compare as NFC, ignoring case (F10). A name with another
 size counts as "size differs": treat it as stick-only until the user checks it. rekordbox can change
 names on export, so stick_only can hold false alarms. This is a name and size check, not an audio
@@ -10,7 +11,9 @@ import argparse
 import json
 import os
 import sys
+import tempfile
 import unicodedata
+from pathlib import Path
 
 AUDIO_EXT = (".mp3", ".m4a", ".aac", ".wav", ".aif", ".aiff", ".flac", ".opus", ".ogg", ".alac")
 SYSTEM = {".fseventsd", ".Spotlight-V100", ".Trashes", ".TemporaryItems", ".metadata_never_index", ".DS_Store"}
@@ -72,6 +75,11 @@ def main():
     if not os.path.isdir(vol):
         print(f"Not mounted: {vol}", file=sys.stderr)
         return 1
+    report = Path(a.json).absolute() if a.json else None
+    if report is not None:
+        for destination in (report, report.resolve()):
+            if any(p.exists() and p.samefile(vol) for p in (destination, *destination.parents)):
+                ap.error("--json must be outside the audited volume; no report was written")
     res = compare(vol, a.mac_root or ["~/Music"])
     print(f"audio on stick: matched={len(res['matched'])} stick_only={len(res['stick_only'])} size_differs={len(res['size_differs'])}")
     for label in ("stick_only", "size_differs", "non_rekordbox"):
@@ -79,9 +87,12 @@ def main():
         for rel in res[label]:
             print(" ", rel)
     print("\nA wipe removes all of the above. Name each stick_only and size_differs file to the user.")
-    if a.json:
-        with open(a.json, "w", encoding="utf-8") as fh:
-            json.dump(res, fh, indent=1, ensure_ascii=False)
+    if report is not None:
+        # Replace the report, rather than truncating an outside hard link to an audited file.
+        with tempfile.TemporaryDirectory(prefix=".audit-report-", dir=report.parent) as tmp:
+            staged = Path(tmp) / "report.json"
+            staged.write_text(json.dumps(res, indent=1, ensure_ascii=False), encoding="utf-8")
+            staged.replace(report)
     return 0
 
 

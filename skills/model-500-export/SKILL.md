@@ -22,6 +22,8 @@ Own the stick named in the profile and any backup stick. Golden rule: never drag
 3. GUI: `mcp__computer-use__*` if present, otherwise `mcp__mac-gui__*`. Use for Reload Tag, Export Playlist, My Settings.
 4. The user: approve the export, load the stick on a CDJ-3000X, report what shows.
 
+Save JSON reports outside the audited volume. The scripts reject paths on the stick, including symlink aliases.
+
 ## Steps: export
 1. Tell the user all GUI-only steps first, in order. Include any rename from model-500-library.
 2. Check the playlists: BPM and key on every track, art counts. Route gaps to model-500-library.
@@ -62,6 +64,7 @@ None exists today. Export again through rekordbox onto a second stick. Do not co
 - Never rename or move anything in `Contents` or `PIONEER`.
 
 ## Do not
+- **F45** Did: Sent an audit report to a fixture audio path. Result: The read-only audit overwrote that file. Rule: Keep report paths outside the audited volume and replace reports atomically.
 - **F13** Did: Deleted a friend's sets on request, backups included. Result: 162 tracks are gone for good. They were never in the Mac library. Rule: Ask once more when a delete leaves no other copy.
 - **F12** Did: Wiped the stick, then needed a GUI export. Result: 162 stick-only tracks had no Mac copy. Rule: Diff stick against Mac and get an OK before any wipe.
 - **F11** Did: Moved or renamed files on the stick. Result: `export.pdb` and `exportLibrary.db` hold exact paths, so tracks vanished. Rule: Change playlists in rekordbox and export again.
