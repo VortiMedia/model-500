@@ -13,6 +13,7 @@
 ### Fixed
 - IGNITE reads use flat app sample paths and one-based USB bank folders directly under the export root.
 - Prepared WAV files use classic PCM headers without changing the converted PCM frames. Regression tests cover both native layouts and the header.
+- IGNITE bank reads report each slot's WAV format tag and any `._` AppleDouble file beside it. Native exports use tag 1.
 
 ## 0.1.0 (2026-11-06)
 

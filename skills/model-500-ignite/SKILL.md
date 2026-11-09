@@ -35,9 +35,9 @@ Take finished clips from model-500-samples. Put them in banks in RMX-IGNITE Samp
 3. Plan the layout as a table: bank, slot, clip, seconds. Check the 16 s bank total.
 4. Ask the user to OK the plan. Ask before taking focus.
 5. Call `ignite_gui_steps(action="assign")`. Run the steps in the GUI, or give them to the user.
-6. Call `ignite_list_library` again. Check each expected slot. Investigate missing paths before calling an audio file corrupt.
+6. Call `ignite_list_library` again. Check each expected slot. Investigate missing paths before calling an audio file corrupt. Re-assign any slot whose `wav_format_tag` is not 1.
 7. Call `ignite_gui_steps(action="export")`. Tell the user the drive name before you click OK.
-8. Call `ignite_read_usb` on that drive.
+8. Call `ignite_read_usb` on that drive. Each slot needs `wav_format_tag` 1 and `appledouble_found` false. Re-assign any other slot in the GUI.
 9. Give the user the `unit_load` steps: [BROWSE/UTILITY] > [BANK SELECT] > [USER].
 10. Report "not tested on the unit" until the user plays it.
 
@@ -61,6 +61,7 @@ Take finished clips from model-500-samples. Put them in banks in RMX-IGNITE Samp
 ## Do not
 - **F43** Did: Used an inferred folder layout. Result: All 14 native export samples appeared missing. Rule: Check flat app samples and one-based USB bank folders separately.
 - **F44** Did: Checked the codec only. Result: FFmpeg wrote an extended WAV header. Rule: Prepare classic PCM headers and verify unchanged PCM frames. Hardware playback stays unverified.
+- **F46** Did: Wrote WAVs into the app folder by hand, then exported. Result: The stick had tag 65534 files and `._` files, and the scan passed them. Rule: Check `wav_format_tag` and `appledouble_found` after export.
 - **F33** Did: Looked for a way to drive Sample Manager. No MCP covered it. Result: Samples must not be dragged onto the stick. Rule: Use the app's Export. Never drag samples onto the stick.
 - **F39** Did: Sent one pid-targeted click to the app to fill a bank. Result: No effect. Rule: Bank edits need the app in front, or the user.
 - **F40** Did: Early mac-gui tests took focus. Result: the user's keystrokes may have been lost. Rule: Ask the user before taking focus.

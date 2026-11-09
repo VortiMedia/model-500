@@ -10,10 +10,10 @@ Test: `python3 tests/test_ignite_mcp.py` (real stdio JSON-RPC, generated tones).
 | Tool | What it does | What the test proves |
 |---|---|---|
 | `ignite_status` | Install, version, running, library path, USB volumes | Reads the real app and its version |
-| `ignite_list_library` | Banks and slots from `model.json` | Flat sample paths checked against a native backup; generated filled fixtures |
+| `ignite_list_library` | Banks and slots from `model.json` | Flat sample paths checked against a native backup; reports each slot's WAV format tag; generated filled fixtures |
 | `ignite_validate_sample` | Format, depth, rate, length, bank budget; pass or fail with reason | Real ffprobe on each pass and fail case |
 | `ignite_prepare_sample` | Trim, peak normalize, 96 kHz 24 bit stereo WAV | Generated output: length, peak, classic PCM header and unchanged PCM frames |
-| `ignite_read_usb` | Read-only scan of a volume or folder | One-based bank paths checked against a native export; fixtures remain unchanged |
+| `ignite_read_usb` | Read-only scan of a volume or folder | One-based bank paths checked against a native export; reports each slot's WAV format tag and `._` file; fixtures remain unchanged |
 | `ignite_gui_steps` | Exact steps for GUI-only work | Steps return for each action |
 
 `ignite_prepare_sample` writes to `~/Music/Samples/Drops` by default. It refuses `/Volumes`, the app support

@@ -119,6 +119,9 @@ Rule: Test app and USB paths separately against their native layouts. Keep the s
 **F44** [ignite, High] Codec check missed the WAV header (contribution check, 2026-11-07)
 Did: Prepared 24-bit WAV files with FFmpeg and checked only codec fields. Result: The output used format tag 65534, while native exports used classic PCM tag 1. Hardware failure causality was not established.
 Rule: Write prepared WAV files with a classic PCM header. Test the header and unchanged PCM frames; keep hardware playback unverified.
+**F46** [ignite, High] Export scan passed files that skipped the app writer (2026-11-06)
+Did: Wrote two FFmpeg WAVs into the app sample folder and edited `model.json`, then exported. Result: The stick had 2 files with format tag 65534 and `._` AppleDouble files beside them. The other 11 had tag 1. The scan and the codec check passed all 13. The user reported samples as corrupted. Hardware causality was not established.
+Rule: After export, run `ignite_read_usb`. Re-assign in the GUI any slot whose `wav_format_tag` is not 1 or whose `appledouble_found` is true.
 
 ## Agent behavior
 **F34** [all, Low] Opus on simple audits  

@@ -302,6 +302,7 @@ class IgniteMcpTest(unittest.TestCase):
         self.assertTrue(bank["over_16_seconds"])
         self.assertEqual(bank["slots"][0]["slot"], "B")
         self.assertTrue(bank["slots"][0]["sample_found"])
+        self.assertEqual(bank["slots"][0]["wav_format_tag"], wav_format_tag(self.good))
         if APP.is_dir():
             self.assertTrue(result["factory_samples"])
         else:
@@ -357,6 +358,38 @@ class IgniteMcpTest(unittest.TestCase):
         result = self.client.call("ignite_read_usb", volume_path=str(root))
         self.assertTrue(result["export_banks"]["used_banks"][-1]["slots"][0]["sample_found"])
         self.assertEqual(tree_state(root), before)
+
+    def test_read_usb_reports_header_tag_and_appledouble(self) -> None:
+        root = SCRATCH / "usb_headers"
+        key = "AlphaTheta/RMX-IGNITE/RMX-IGNITESETTINGS.json"
+        self.make_library(root, key)
+        path = root / key
+        model = json.loads(path.read_text())
+        model["bank"][0]["bank_name"] = "VOCALS"
+        model["bank"][0]["slot"][0].update(file_name="A.wav", time_length=0.1)
+        model["bank"][0]["slot"][1].update(file_name="B.wav", time_length=0.1)
+        path.write_text(json.dumps(model))
+        samples = root / "AlphaTheta/RMX-IGNITE/01"
+        samples.mkdir(parents=True)
+        frames = bytes(6 * 9600)
+        with wave.open(str(samples / "A.wav"), "wb") as stream:
+            stream.setnchannels(2)
+            stream.setsampwidth(3)
+            stream.setframerate(96000)
+            stream.writeframes(frames)
+        pcm_guid = bytes.fromhex("0100000000001000800000aa00389b71")
+        fmt = struct.pack("<HHIIHHHHI16s", 0xFFFE, 2, 96000, 96000 * 6, 6, 24, 22, 24, 3, pcm_guid)
+        body = b"WAVE" + b"fmt " + struct.pack("<I", len(fmt)) + fmt + b"data" + struct.pack("<I", len(frames)) + frames
+        (samples / "B.wav").write_bytes(b"RIFF" + struct.pack("<I", len(body)) + body)
+        (samples / "._B.wav").write_bytes(b"\x00\x05\x16\x07\x00\x02\x00\x00Mac OS X".ljust(4096, b"\x00"))
+        before = tree_state(root)
+        result = self.client.call("ignite_read_usb", volume_path=str(root))
+        self.assertEqual(tree_state(root), before)
+        self.assertEqual(result["unit_audio_files"], 2)
+        a, b = result["export_banks"]["used_banks"][0]["slots"]
+        self.assertEqual((a["wav_format_tag"], a["appledouble_found"]), (1, False))
+        self.assertTrue(b["sample_found"])
+        self.assertEqual((b["wav_format_tag"], b["appledouble_found"]), (65534, True))
 
     def test_read_usb_missing_path(self) -> None:
         self.assertFalse(self.client.call("ignite_read_usb", volume_path=str(SCRATCH / "absent"))["ok"])
