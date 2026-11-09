@@ -2,13 +2,16 @@
 and compares it with the audio files under Contents/. Writes nothing to the stick.
 
 Usage: python3 -I read_pdb.py /Volumes/STICK [--json OUT.json]
+JSON reports must be outside the audited volume, including resolved symlink targets.
 Does not read exportLibrary.db (encrypted). Only a CDJ test proves OneLibrary loads."""
 import argparse
 import json
 import os
 import struct
 import sys
+import tempfile
 import unicodedata
+from pathlib import Path
 
 nfc = lambda s: unicodedata.normalize("NFC", s or "")
 
@@ -72,7 +75,7 @@ def parse(pdb_path):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("volume", help="mount point, e.g. /Volumes/STICK")
-    ap.add_argument("--json", help="also write parsed tracks and playlists to this file")
+    ap.add_argument("--json", help="also write parsed tracks and playlists outside the audited volume")
     a = ap.parse_args()
     vol = a.volume.rstrip("/")
     pdb = f"{vol}/PIONEER/rekordbox/export.pdb"
@@ -81,6 +84,11 @@ def main():
         for name in ("PIONEER/rekordbox/exportLibrary.db", "PIONEER/rekordbox"):
             print(f"  {name}: {'present' if os.path.exists(f'{vol}/{name}') else 'absent'}")
         return 1
+    report = Path(a.json).absolute() if a.json else None
+    if report is not None:
+        for destination in (report, report.resolve()):
+            if any(p.exists() and p.samefile(vol) for p in (destination, *destination.parents)):
+                ap.error("--json must be outside the audited volume; no report was written")
     page_size, n_tables, tracks, nodes = parse(pdb)
     print(f"page_size={page_size} tables={n_tables} tracks={len(tracks)} playlists={len(nodes)}")
 
@@ -110,8 +118,12 @@ def main():
         if os.path.exists(p):
             print(f"{name}: size={os.path.getsize(p)}")
     print("NOTE: a CDJ test is still needed to prove the stick loads.")
-    if a.json:
-        json.dump({"tracks": tracks, "nodes": nodes}, open(a.json, "w"), indent=1, default=str)
+    if report is not None:
+        # Replace the report, rather than truncating an outside hard link to an audited file.
+        with tempfile.TemporaryDirectory(prefix=".audit-report-", dir=report.parent) as tmp:
+            staged = Path(tmp) / "report.json"
+            staged.write_text(json.dumps({"tracks": tracks, "nodes": nodes}, indent=1, default=str), encoding="utf-8")
+            staged.replace(report)
     return 0
 
 

@@ -63,6 +63,10 @@ Rule: Clean last. Delete `._*` and .Spotlight-V100, run mdutil -i off, recheck a
 Did: Tried to rename a playlist while rekordbox was open. Result: Agent could not write. The user had to rename it before export.  
 Rule: Tell the user GUI-only steps first, in order, before the export step.
 
+**F45** [export, Critical] Read-only audit overwrote an input (contribution check, 2026-11-07)
+Did: Passed a fixture audio path on the audited volume to `--json` in `read_pdb.py` and `stick_vs_mac.py`. Result: Both tools returned success and replaced the input with JSON.
+Rule: Reject report paths on the audited volume, including symlink and case aliases. Replace reports outside the volume atomically, so hard links cannot overwrite audited audio.
+
 ## Crate, files and tags
 **F19** [crate, High] Opus will not play  
 Did: Imported YouTube Opus rips. Result: rekordbox has no Opus support. Files unusable.  

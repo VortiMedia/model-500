@@ -22,7 +22,7 @@ The name is a nod to [Juan Atkins](https://en.wikipedia.org/wiki/Juan_Atkins)'s 
 
 rekordbox libraries are easy to damage and hard to check. An agent that guesses can lose real work. So each skill carries a `## Do not` list of things that went wrong in real sessions, in the same form: what the agent did, what happened, and the rule.
 
-Two of the 44 entries in [`docs/failures.md`](docs/failures.md), as the skills hold them:
+Two entries from [`docs/failures.md`](docs/failures.md), as the skills hold them:
 
 > **F06** Did: Ran `update_content_path(save=True)` to fix moved paths. Result: pyrekordbox rewrote ANLZ files: PVDI lost, PCOB, PCO2, PSSI changed. Rule: Use `safe_move.py`. Never call that function with `save=True`.
 

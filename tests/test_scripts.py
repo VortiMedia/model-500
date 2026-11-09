@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Tests for the stdlib repo scripts, on temp fixtures only. Run: python3 tests/test_scripts.py"""
 import json
+import os
+import struct
 import subprocess
 import sys
 import tempfile
@@ -106,6 +108,102 @@ class ReadPdb(unittest.TestCase):
             r = run(READ_PDB, tmp)
         self.assertEqual(r.returncode, 1)
         self.assertIn("No export.pdb", r.stdout)
+
+
+class UsbReportSafety(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.stick = self.root / "STICK"
+        self.mac = self.root / "mac"
+        self.mac.mkdir()
+        self.audio = self.stick / "Contents/only-copy.wav"
+        touch(self.audio, b"only copy of the audio")
+        self.pdb = self.stick / "PIONEER/rekordbox/export.pdb"
+        touch(self.pdb, struct.pack("<7I", 0, 4096, 0, 0, 0, 0, 0))
+
+    def audit(self, script, destination):
+        args = [self.stick, "--json", destination]
+        if script == STICK:
+            args.extend(["--mac-root", self.mac])
+        return run(script, *args)
+
+    def snapshot(self):
+        return {str(p.relative_to(self.stick)): p.read_bytes() if p.is_file() else None
+                for p in self.stick.rglob("*")}
+
+    def assert_refused(self, destination):
+        before = self.snapshot()
+        for script in (STICK, READ_PDB):
+            with self.subTest(script=script.name):
+                result = self.audit(script, destination)
+                self.assertNotEqual(result.returncode, 0, result.stdout)
+                self.assertIn("outside the audited volume", result.stderr)
+                self.assertEqual(self.snapshot(), before)
+
+    def test_report_on_stick_is_not_created(self):
+        self.assert_refused(self.stick / "audit.json")
+
+    def test_relative_report_on_stick_is_refused(self):
+        self.assert_refused(Path(os.path.relpath(self.stick / "audit.json")))
+
+    def test_existing_audio_and_database_are_not_overwritten(self):
+        for destination in (self.audio, self.pdb):
+            self.assert_refused(destination)
+
+    def test_volume_itself_is_refused(self):
+        self.assert_refused(self.stick)
+
+    def test_symlinked_file_and_parent_are_refused(self):
+        link = self.root / "linked-report.json"
+        link.symlink_to(self.audio)
+        self.assert_refused(link)
+        parent = self.root / "linked-folder"
+        parent.symlink_to(self.stick, target_is_directory=True)
+        self.assert_refused(parent / "report.json")
+
+    def test_report_named_on_stick_cannot_follow_a_symlink_outside(self):
+        outside = self.root / "outside.json"
+        outside.write_bytes(b"keep outside data")
+        link = self.stick / "linked-report.json"
+        link.symlink_to(outside)
+        self.assert_refused(link)
+        self.assertEqual(outside.read_bytes(), b"keep outside data")
+        parent = self.stick / "linked-folder"
+        parent.symlink_to(self.mac, target_is_directory=True)
+        self.assert_refused(parent / "report.json")
+
+    def test_case_alias_is_refused_on_case_insensitive_filesystems(self):
+        alias = self.root / "stick"
+        if not alias.exists() or not alias.samefile(self.stick):
+            self.skipTest("filesystem is case-sensitive")
+        self.assert_refused(alias / "report.json")
+
+    def test_outside_reports_can_be_created_and_replaced(self):
+        before = self.snapshot()
+        outside = self.root / "STICK-backup"
+        outside.mkdir()
+        for script in (STICK, READ_PDB):
+            destination = outside / (script.stem + ".json")
+            for existing in (False, True):
+                with self.subTest(script=script.name, existing=existing):
+                    if existing:
+                        destination.write_text("old report")
+                    result = self.audit(script, destination)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIsInstance(json.loads(destination.read_text()), dict)
+                    self.assertEqual(self.snapshot(), before)
+
+    def test_outside_hard_link_does_not_overwrite_audited_audio(self):
+        before = self.snapshot()
+        for script in (STICK, READ_PDB):
+            destination = self.root / (script.stem + "-hardlink.json")
+            os.link(self.audio, destination)
+            result = self.audit(script, destination)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIsInstance(json.loads(destination.read_text()), dict)
+            self.assertEqual(self.snapshot(), before)
 
 
 if __name__ == "__main__":
