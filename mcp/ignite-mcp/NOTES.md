@@ -14,9 +14,15 @@ Studied app 1.0.0.0336 on 2026-11-06. Vendor binaries, disassembly, and excerpts
   - `settings/settings.json`: plain JSON.
   - `log/`: opaque binary usage logs. Not plain text. We did not try to decode them.
 
+## Native backup and export (observed, 2026-11-07)
+- Export root: `<drive>/AlphaTheta/RMX-IGNITE/RMX-IGNITESETTINGS.json`. Audio is in `01/`, `02/`, and so on directly under that root.
+- JSON `bank_number` starts at zero. USB folder numbers start at one.
+- App backup samples are flat: `model/samples/<file_name>`. There is no bank folder here.
+- A read-only check found all 14 files in the native export. No private audio or app data is included in the tests.
+- Native exports used classic PCM WAV format tag 1, 96 kHz, 24-bit stereo. Preparation writes that header without changing the PCM frames.
+- No file prepared by this tool has been tested on the unit. An extended header was not proven to cause playback failure.
+
 ## Inferred from the app's resource text, not observed
-- Export root: `<drive>/AlphaTheta/RMX-IGNITE/RMX-IGNITESETTINGS.json`, plus `samples/<NN>/`.
-- App samples: `model/samples/<NN>/`.
 - On assign, the app converts audio to a 2-channel WAV. The call passes 96000 and 24.
   Some inputs take a copy path instead. The condition was not traced.
 
@@ -33,6 +39,5 @@ Studied app 1.0.0.0336 on 2026-11-06. Vendor binaries, disassembly, and excerpts
 - Name style: uppercase, like `909 KICK`, max 24 characters. The app's name limit was not found.
 
 ## Why there is no write tool
-No populated `model.json` or real export was seen, and the unit cannot be tested from here.
-The test GUI session could not get a filled bank: a click sent to the app's process had no effect, and taking
-focus was not an option while the owner used the machine. A real export to a scratch drive is the next step.
+Bank edits and export stay in Sample Manager. The native backup and export establish read paths, not a supported write API.
+The original GUI test did not fill a bank, and no file prepared by this tool has played on the unit.

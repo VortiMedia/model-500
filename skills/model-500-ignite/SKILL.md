@@ -35,7 +35,7 @@ Take finished clips from model-500-samples. Put them in banks in RMX-IGNITE Samp
 3. Plan the layout as a table: bank, slot, clip, seconds. Check the 16 s bank total.
 4. Ask the user to OK the plan. Ask before taking focus.
 5. Call `ignite_gui_steps(action="assign")`. Run the steps in the GUI, or give them to the user.
-6. Call `ignite_list_library` again. A filled bank has never been parsed, so treat a mismatch as a parser issue first.
+6. Call `ignite_list_library` again. Check each expected slot. Investigate missing paths before calling an audio file corrupt.
 7. Call `ignite_gui_steps(action="export")`. Tell the user the drive name before you click OK.
 8. Call `ignite_read_usb` on that drive.
 9. Give the user the `unit_load` steps: [BROWSE/UTILITY] > [BANK SELECT] > [USER].
@@ -59,6 +59,8 @@ Take finished clips from model-500-samples. Put them in banks in RMX-IGNITE Samp
 - Before any sample delete, check for another copy. If none exists, name it and ask once more.
 
 ## Do not
+- **F43** Did: Used an inferred folder layout. Result: All 14 native export samples appeared missing. Rule: Check flat app samples and one-based USB bank folders separately.
+- **F44** Did: Checked the codec only. Result: FFmpeg wrote an extended WAV header. Rule: Prepare classic PCM headers and verify unchanged PCM frames. Hardware playback stays unverified.
 - **F33** Did: Looked for a way to drive Sample Manager. No MCP covered it. Result: Samples must not be dragged onto the stick. Rule: Use the app's Export. Never drag samples onto the stick.
 - **F39** Did: Sent one pid-targeted click to the app to fill a bank. Result: No effect. Rule: Bank edits need the app in front, or the user.
 - **F40** Did: Early mac-gui tests took focus. Result: the user's keystrokes may have been lost. Rule: Ask the user before taking focus.
@@ -77,7 +79,7 @@ The user says "put the first drop on bank 1". Validate the clip. Report: "4.5 s,
 
 ## Not proven
 - No hardware test. No file from this tool has played on an RMX-IGNITE.
-- USB layout comes from app strings. No real export was inspected. Filled-bank parsing rests on synthetic fixtures.
+- Paths were checked against a native backup and export. Automated tests use generated samples with those layouts.
 - 96 kHz 24 bit and the name style are our choices. A validation pass is not a promise.
 
 ## Context

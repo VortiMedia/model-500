@@ -8,9 +8,11 @@ read-only check of that volume. The tool never writes to it.
 import json
 import os
 import shutil
+import struct
 import subprocess
 import tempfile
 import unittest
+import wave
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -41,6 +43,17 @@ def tone(path: Path, seconds: float, *codec: str) -> Path:
     command = ["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", f"sine=frequency=440:duration={seconds}"]
     subprocess.run([*command, *codec, str(path)], check=True, stdin=subprocess.DEVNULL)
     return path
+
+
+def wav_format_tag(path: Path) -> int:
+    with path.open("rb") as stream:
+        assert stream.read(12)[8:] == b"WAVE"
+        while header := stream.read(8):
+            tag, size = struct.unpack("<4sI", header)
+            if tag == b"fmt ":
+                return struct.unpack("<H", stream.read(2))[0]
+            stream.seek(size + size % 2, 1)
+    raise AssertionError("WAV has no fmt chunk")
 
 
 class Client:
@@ -172,6 +185,7 @@ class IgniteMcpTest(unittest.TestCase):
             ("pcm_s24le", 96000, 24, 2),
         )
         self.assertAlmostEqual(props["seconds"], 2.0, delta=0.01)
+        self.assertEqual(wav_format_tag(output), 1)
         self.assertTrue(self.client.call("ignite_validate_sample", path=str(output))["pass"])
         peak = subprocess.run(
             ["ffmpeg", "-hide_banner", "-nostdin", "-i", str(output), "-af", "volumedetect", "-f", "null", "-"],
@@ -193,12 +207,28 @@ class IgniteMcpTest(unittest.TestCase):
             overwrite=True,
         )
         self.assertTrue(result["ok"], result)
+        self.assertEqual(wav_format_tag(Path(result["output"])), 1)
         peak = subprocess.run(
             ["ffmpeg", "-hide_banner", "-nostdin", "-i", result["output"], "-af", "volumedetect", "-f", "null", "-"],
             capture_output=True,
             text=True,
         ).stderr
         self.assertIn("max_volume: -3.0 dB", peak)
+
+    def test_prepare_classic_header_preserves_pcm(self) -> None:
+        source = tone(SCRATCH / "pcm24.wav", 1, "-ar", "96000", "-ac", "2", "-c:a", "pcm_s24le")
+        expected = subprocess.check_output(
+            ["ffmpeg", "-v", "error", "-i", str(source), "-f", "s24le", "-c:a", "pcm_s24le", "-"]
+        )
+        result = self.client.call(
+            "ignite_prepare_sample", input_path=str(source), name="pcm frames",
+            output_dir=str(SCRATCH / "staging"), normalize="none", fade_out_ms=0,
+        )
+        self.assertTrue(result["ok"], result)
+        output = Path(result["output"])
+        self.assertEqual(wav_format_tag(output), 1)
+        with wave.open(str(output), "rb") as reader:
+            self.assertEqual(reader.readframes(reader.getnframes()), expected)
 
     def test_prepare_refusals_write_nothing(self) -> None:
         out = SCRATCH / "refused"
@@ -260,7 +290,7 @@ class IgniteMcpTest(unittest.TestCase):
     def test_library_fixture_and_real_read(self) -> None:
         root = SCRATCH / "support_fixture"
         self.make_library(root, "model/model.json")
-        samples = root / "model/samples/02"
+        samples = root / "model/samples"
         samples.mkdir(parents=True, exist_ok=True)
         shutil.copy(self.good, samples / "HORN.wav")
         result = self.client.call("ignite_list_library", support_dir=str(root), include_factory=True)
@@ -286,7 +316,7 @@ class IgniteMcpTest(unittest.TestCase):
     def test_read_usb_fixture_is_read_only(self) -> None:
         root = SCRATCH / "usb_fixture"
         self.make_library(root, "AlphaTheta/RMX-IGNITE/RMX-IGNITESETTINGS.json")
-        samples = root / "AlphaTheta/RMX-IGNITE/samples/02"
+        samples = root / "AlphaTheta/RMX-IGNITE/03"
         samples.mkdir(parents=True, exist_ok=True)
         shutil.copy(self.good, samples / "HORN.wav")
         before = tree_state(root)
@@ -296,7 +326,37 @@ class IgniteMcpTest(unittest.TestCase):
         self.assertTrue(result["settings_parsed"])
         self.assertEqual(result["unit_audio_files"], 1)
         self.assertEqual(result["export_banks"]["used_banks"][0]["name"], "DROPS")
-        self.assertIn("No real export", result["layout_note"])
+        self.assertTrue(result["export_banks"]["used_banks"][0]["slots"][0]["sample_found"])
+
+    def test_read_usb_uses_one_based_bank_folders(self) -> None:
+        root = SCRATCH / "usb_bank_boundaries"
+        key = "AlphaTheta/RMX-IGNITE/RMX-IGNITESETTINGS.json"
+        self.make_library(root, key)
+        path = root / key
+        model = json.loads(path.read_text())
+        model["bank"][2]["bank_name"] = ""
+        model["bank"][2]["slot"][1].update(file_name="", slot_name="")
+        for index in (0, 14):
+            model["bank"][index]["bank_name"] = f"BANK {index + 1}"
+            model["bank"][index]["slot"][0].update(file_name="HORN.wav", time_length=3.0)
+        path.write_text(json.dumps(model))
+        samples = root / "AlphaTheta/RMX-IGNITE/01"
+        samples.mkdir(parents=True)
+        shutil.copy(self.good, samples / "HORN.wav")
+        before = tree_state(root)
+        result = self.client.call("ignite_read_usb", volume_path=str(root))
+        banks = result["export_banks"]["used_banks"]
+        self.assertEqual([b["bank"] for b in banks], [1, 15])
+        self.assertTrue(banks[0]["slots"][0]["sample_found"])
+        self.assertFalse(banks[1]["slots"][0]["sample_found"])
+        self.assertEqual(tree_state(root), before)
+        samples = root / "AlphaTheta/RMX-IGNITE/15"
+        samples.mkdir()
+        shutil.copy(self.good, samples / "HORN.wav")
+        before = tree_state(root)
+        result = self.client.call("ignite_read_usb", volume_path=str(root))
+        self.assertTrue(result["export_banks"]["used_banks"][-1]["slots"][0]["sample_found"])
+        self.assertEqual(tree_state(root), before)
 
     def test_read_usb_missing_path(self) -> None:
         self.assertFalse(self.client.call("ignite_read_usb", volume_path=str(SCRATCH / "absent"))["ok"])

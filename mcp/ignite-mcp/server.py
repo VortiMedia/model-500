@@ -12,6 +12,7 @@ import plistlib
 import re
 import shutil
 import subprocess
+import wave
 from pathlib import Path
 from typing import Any, Literal
 
@@ -39,8 +40,8 @@ PREPARE_DEPTH = 24
 NAME_MAX = 24
 USB_SCAN_LIMIT = 2000
 LAYOUT_NOTE = (
-    "USB layout is inferred from the app's resource text, app 1.0.0.0336. "
-    "No real export has been inspected."
+    "USB layout was checked against a native Sample Manager 1.0.0.0336 export. "
+    "Bank folders are one-based; hardware playback is not verified."
 )
 UNIT_CAVEAT = "The unit manual says some files in supported formats can still fail to play."
 
@@ -250,7 +251,7 @@ def _load_json(path: Path) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
-def _summarize_banks(model: dict[str, Any], samples_dir: Path) -> dict[str, Any]:
+def _summarize_banks(model: dict[str, Any], samples_dir: Path, *, bank_folders: bool = False) -> dict[str, Any]:
     banks = []
     bank_rows = model.get("bank") if isinstance(model.get("bank"), list) else []
     for bank in bank_rows:
@@ -264,7 +265,8 @@ def _summarize_banks(model: dict[str, Any], samples_dir: Path) -> dict[str, Any]
             seconds = float(slot.get("time_length") or 0.0)
             total += seconds
             index = int(slot.get("slot_number") or 0)
-            sample = samples_dir / f"{int(bank.get('bank_number') or 0):02d}" / str(slot.get("file_name"))
+            folder = samples_dir / f"{int(bank.get('bank_number') or 0) + 1:02d}" if bank_folders else samples_dir
+            sample = folder / str(slot.get("file_name"))
             slots.append(
                 {
                     "slot": "ABCD"[index] if 0 <= index < 4 else str(index),
@@ -333,7 +335,7 @@ def ignite_list_library(support_dir: str | None = None, include_factory: bool = 
         "library_path": str(root),
         **_summarize_banks(model, root / "model/samples"),
         "bank_collection_count": len(rows) if isinstance(rows, list) else 0,
-        "note": "Filled-slot fields are parsed by name. No filled library from the app has been inspected.",
+        "note": "App sample paths were checked against a native backup. Hardware playback is not verified.",
     }
     if include_factory:
         factory = APP_PATH / "Contents/Resources/FactorySamples"
@@ -446,6 +448,13 @@ def ignite_prepare_sample(
     if result.returncode != 0:
         temp.unlink(missing_ok=True)
         return {"ok": False, "reason": "ffmpeg failed: " + result.stderr[-400:], "output_written": False}
+    # FFmpeg can write WAVE_FORMAT_EXTENSIBLE. Keep the PCM frames, but use a classic PCM header.
+    with wave.open(str(temp), "rb") as reader:
+        params = reader.getparams()
+        frames = reader.readframes(reader.getnframes())
+    with wave.open(str(temp), "wb") as writer:
+        writer.setparams(params)
+        writer.writeframes(frames)
     check = _validate(temp, 0.0)
     if not check["pass"]:
         temp.unlink(missing_ok=True)
@@ -510,7 +519,7 @@ def ignite_read_usb(volume_path: str, max_files: int = 500) -> dict[str, Any]:
         "layout_note": LAYOUT_NOTE,
     }
     if settings is not None and "bank" in settings:
-        result["export_banks"] = _summarize_banks(settings, export_root / "samples")
+        result["export_banks"] = _summarize_banks(settings, export_root, bank_folders=True)
     return result
 
 
