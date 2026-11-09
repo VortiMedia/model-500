@@ -11,6 +11,7 @@ import os
 import plistlib
 import re
 import shutil
+import struct
 import subprocess
 import wave
 from pathlib import Path
@@ -251,6 +252,24 @@ def _load_json(path: Path) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
+def _wav_format_tag(path: Path) -> int | None:
+    """Return the fmt chunk format tag of a RIFF/WAVE file, or None."""
+    try:
+        with path.open("rb") as stream:
+            head = stream.read(12)
+            if head[:4] != b"RIFF" or head[8:] != b"WAVE":
+                return None
+            while len(header := stream.read(8)) == 8:
+                tag, size = struct.unpack("<4sI", header)
+                if tag == b"fmt ":
+                    data = stream.read(2)
+                    return struct.unpack("<H", data)[0] if len(data) == 2 else None
+                stream.seek(size + size % 2, 1)
+    except OSError:
+        return None
+    return None
+
+
 def _summarize_banks(model: dict[str, Any], samples_dir: Path, *, bank_folders: bool = False) -> dict[str, Any]:
     banks = []
     bank_rows = model.get("bank") if isinstance(model.get("bank"), list) else []
@@ -277,6 +296,8 @@ def _summarize_banks(model: dict[str, Any], samples_dir: Path, *, bank_folders: 
                     "bpm": slot.get("bpm"),
                     "is_loop": bool(slot.get("is_loop")),
                     "sample_found": sample.is_file(),
+                    "wav_format_tag": _wav_format_tag(sample),
+                    "appledouble_found": (folder / f"._{sample.name}").exists(),
                 }
             )
         if slots or bank.get("bank_name"):
