@@ -3,7 +3,7 @@ name = "ignite-mcp"
 version = "0.1.0"
 description = "MCP server for AlphaTheta RMX-IGNITE Sample Manager: status, library read, sample validate and prepare, USB read."
 requires-python = ">=3.12,<3.14"
-dependencies = ["mcp>=1.2,<2"]
+dependencies = ["mcp>=1.2,<3"]
 
 [tool.uv]
 package = false
